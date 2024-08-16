@@ -14,18 +14,17 @@ using UrlShortenerApi.Infrastructure.Cache;
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string connectionString = "User ID=postgres;Password=password;Host=localhost;Port=5432;Database=AdminDb;";
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<ICodeGenerator, CodeGenerator>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-builder.Services.AddDbContext<UrlShortenerContext>(options =>
-{
-    options.UseNpgsql("User ID=postgres;Password=password;Host=localhost;Port=5432;Database=AdminDb;");
-});
+builder.Services.AddDbContext<UrlShortenerContext>(options => { options.UseNpgsql(connectionString); });
 builder.Services.AddCoreAdmin();
 builder.Services.AddDistributedPostgreSqlCache(setup =>
 {
-    setup.ConnectionString = "User ID=postgres;Password=password;Host=localhost;Port=5432;Database=AdminDb;";
+    setup.ConnectionString = connectionString;
     setup.SchemaName = "cache-schema";
     setup.TableName = "cache-table";
     setup.ExpiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
@@ -82,7 +81,7 @@ app.MapPost("shorten",
 
         return Results.Ok(shortenedUrl);
     });
-app.MapGet("{code}", async (string code, IMediator mediator, CancellationToken ctx) =>
+app.MapGet("c/{code}", async (string code, IMediator mediator, CancellationToken ctx) =>
 {
     var longUrl = await mediator.Send(new GetShortenedUrlQuery
     {

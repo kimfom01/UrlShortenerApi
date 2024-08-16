@@ -32,7 +32,7 @@ public class CreateShortenedUrlCommandHandler : IRequestHandler<CreateShortenedU
             LongUrl = request.LongUrl,
             Code = code,
             CreatedOnUtc = DateTime.UtcNow,
-            ShortUrl = $"{request.Scheme}://{request.Host}/{code}",
+            ShortUrl = $"{request.Scheme}://{request.Host}/c/{code}",
             UserId = request.UserId
         };
 
