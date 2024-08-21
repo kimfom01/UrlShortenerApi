@@ -1,5 +1,5 @@
 using MediatR;
-using UrlShortenerApi.Application.Dtos;
+using UrlShortenerApi.Application.Dtos.ShortenedUrls;
 
 namespace UrlShortenerApi.Application.Features.ShortenedUrls.Commands;
 

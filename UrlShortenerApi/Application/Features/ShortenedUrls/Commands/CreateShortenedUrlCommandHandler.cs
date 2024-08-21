@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using UrlShortenerApi.Application.Contracts;
-using UrlShortenerApi.Application.Dtos;
+using UrlShortenerApi.Application.Dtos.ShortenedUrls;
 using UrlShortenerApi.Domain;
 using UrlShortenerApi.Infrastructure.Database;
 

@@ -1,16 +1,16 @@
 using System.Reflection;
-using UrlShortenerApi.Domain;
 using UrlShortenerApi.Infrastructure.Database;
 using Community.Microsoft.Extensions.Caching.PostgreSql;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
 using UrlShortenerApi.Application.Contracts;
-using UrlShortenerApi.Application.Dtos;
+using UrlShortenerApi.Application.Dtos.ShortenedUrls;
+using UrlShortenerApi.Application.Dtos.Users;
 using UrlShortenerApi.Application.Features.ShortenedUrls.Commands;
 using UrlShortenerApi.Application.Features.ShortenedUrls.Queries;
+using UrlShortenerApi.Application.Features.Users.Commands;
+using UrlShortenerApi.Application.Features.Users.Queries;
 using UrlShortenerApi.Application.Services;
-using UrlShortenerApi.Infrastructure.Cache;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,31 +43,32 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.MapDefaultControllerRoute();
 
-app.MapPost("users", async (User user, UrlShortenerContext context) =>
+app.MapPost("users", async (UserCreateRequest request, IMediator mediator, CancellationToken token) =>
 {
-    context.Users.Add(user);
-    await context.SaveChangesAsync();
+    await mediator.Send(new CreateUserCommand
+    {
+        FirstName = request.FirstName
+    }, token);
 
     return Results.Created();
-});
-app.MapGet("users/{id:guid}",
-    async (Guid id, UrlShortenerContext context, IDistributedCache cache, CancellationToken ctx) =>
+}).WithTags("User");
+app.MapGet("users/{id:guid}", async (Guid id, IMediator mediator, CancellationToken token) =>
+{
+    try
     {
-        var user = await cache.GetOrCreateAsync<User?>($"users-{id}", async token =>
+        var userResponse = await mediator.Send(new GetUserByIdQuery
         {
-            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == id, token);
+            UserId = id
+        }, token);
 
-            return user;
-        }, token: ctx);
-
-        if (user is null)
-        {
-            return Results.NotFound();
-        }
-
-        return Results.Ok(user);
-    });
-app.MapGet("users", (UrlShortenerContext context) => Results.Ok(context.Users));
+        return Results.Ok(userResponse);
+    }
+    catch (Exception ex)
+    {
+        return Results.NotFound(ex.Message);
+    }
+}).WithTags("User");
+app.MapGet("users", (UrlShortenerContext context) => Results.Ok(context.Users)).WithTags("User");
 app.MapPost("shorten",
     async (IMediator mediator, HttpContext context, ShortenUrlRequest request, CancellationToken ctx) =>
     {
@@ -80,7 +81,7 @@ app.MapPost("shorten",
         }, ctx);
 
         return Results.Ok(shortenedUrl);
-    });
+    }).WithTags("Shortener");
 app.MapGet("c/{code}", async (string code, IMediator mediator, CancellationToken ctx) =>
 {
     var longUrl = await mediator.Send(new GetShortenedUrlQuery
@@ -94,6 +95,6 @@ app.MapGet("c/{code}", async (string code, IMediator mediator, CancellationToken
     }
 
     return Results.Redirect(longUrl);
-});
+}).WithTags("Shortener");
 
 app.Run();
