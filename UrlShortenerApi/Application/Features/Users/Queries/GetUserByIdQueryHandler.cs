@@ -2,13 +2,15 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using UrlShortenerApi.Application.Dtos.Users;
+using UrlShortenerApi.Application.Errors;
 using UrlShortenerApi.Domain;
+using UrlShortenerApi.Domain.Abstractions;
 using UrlShortenerApi.Infrastructure.Cache;
 using UrlShortenerApi.Infrastructure.Database;
 
 namespace UrlShortenerApi.Application.Features.Users.Queries;
 
-public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserResponse>
+public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, Result<UserResponse>>
 {
     private readonly UrlShortenerContext _context;
     private readonly IDistributedCache _cache;
@@ -18,8 +20,8 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserRes
         _context = context;
         _cache = cache;
     }
-    
-    public async Task<UserResponse> Handle(GetUserByIdQuery request, CancellationToken token)
+
+    public async Task<Result<UserResponse>> Handle(GetUserByIdQuery request, CancellationToken token)
     {
         var user = await _cache.GetOrCreateAsync<User?>($"users-{request.UserId}", async cToken =>
         {
@@ -28,12 +30,11 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserRes
             return user;
         }, token: token);
 
-        // TODO: Implement result pattern 
         if (user is null)
         {
-            throw new Exception($"User with id={request.UserId} not found");
+            return Result<UserResponse>.Failure(UserResponseErrors.NotFound);
         }
-        
-        return new UserResponse(user!.Id, user.FirstName);
+
+        return Result<UserResponse>.Success(new UserResponse(user.Id, user.FirstName));
     }
 }

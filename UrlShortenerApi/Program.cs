@@ -50,29 +50,32 @@ app.MapPost("users", async (UserCreateRequest request, IMediator mediator, Cance
         FirstName = request.FirstName
     }, token);
 
-    return Results.Created();
+    return Results.CreatedAtRoute();
 }).WithTags("User");
 app.MapGet("users/{id:guid}", async (Guid id, IMediator mediator, CancellationToken token) =>
 {
-    try
+    var result = await mediator.Send(new GetUserByIdQuery
     {
-        var userResponse = await mediator.Send(new GetUserByIdQuery
-        {
-            UserId = id
-        }, token);
+        UserId = id
+    }, token);
 
-        return Results.Ok(userResponse);
-    }
-    catch (Exception ex)
+    if (result.IsSuccess)
     {
-        return Results.NotFound(ex.Message);
+        return Results.Ok(result.Value);
     }
+
+    return Results.NotFound(result.Error.Description);
 }).WithTags("User");
-app.MapGet("users", (UrlShortenerContext context) => Results.Ok(context.Users)).WithTags("User");
+app.MapGet("users", async (IMediator mediator, CancellationToken token) =>
+{
+    var result = await mediator.Send(new GetUsersQuery(), token);
+
+    return Results.Ok(result.Value);
+}).WithTags("User");
 app.MapPost("shorten",
     async (IMediator mediator, HttpContext context, ShortenUrlRequest request, CancellationToken ctx) =>
     {
-        var shortenedUrl = await mediator.Send(new CreateShortenedUrlCommand
+        var result = await mediator.Send(new CreateShortenedUrlCommand
         {
             LongUrl = request.Url,
             Host = context.Request.Host,
@@ -80,21 +83,21 @@ app.MapPost("shorten",
             UserId = request.UserId
         }, ctx);
 
-        return Results.Ok(shortenedUrl);
+        return Results.Ok(result.Value);
     }).WithTags("Shortener");
 app.MapGet("c/{code}", async (string code, IMediator mediator, CancellationToken ctx) =>
 {
-    var longUrl = await mediator.Send(new GetShortenedUrlQuery
+    var result = await mediator.Send(new GetShortenedUrlQuery
     {
         Code = code
     }, ctx);
 
-    if (string.IsNullOrWhiteSpace(longUrl))
+    if (result.IsSuccess)
     {
-        return Results.NotFound();
+        return Results.Redirect(result.Value);
     }
 
-    return Results.Redirect(longUrl);
+    return Results.NotFound(result.Error.Description);
 }).WithTags("Shortener");
 
 app.Run();

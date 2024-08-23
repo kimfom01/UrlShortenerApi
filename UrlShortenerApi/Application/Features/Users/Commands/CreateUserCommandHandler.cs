@@ -1,10 +1,11 @@
 using MediatR;
 using UrlShortenerApi.Domain;
+using UrlShortenerApi.Domain.Abstractions;
 using UrlShortenerApi.Infrastructure.Database;
 
 namespace UrlShortenerApi.Application.Features.Users.Commands;
 
-public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Unit>
+public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result<Unit>>
 {
     private readonly UrlShortenerContext _context;
 
@@ -13,7 +14,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Unit>
         _context = context;
     }
 
-    public async Task<Unit> Handle(CreateUserCommand request, CancellationToken token)
+    public async Task<Result<Unit>> Handle(CreateUserCommand request, CancellationToken token)
     {
         var user = new User
         {
@@ -23,6 +24,6 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Unit>
         await _context.Users.AddAsync(user, token);
         await _context.SaveChangesAsync(token);
 
-        return Unit.Value;
+        return Result<Unit>.Success(Unit.Value);
     }
 }

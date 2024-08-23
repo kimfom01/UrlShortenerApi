@@ -3,11 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using UrlShortenerApi.Application.Contracts;
 using UrlShortenerApi.Application.Dtos.ShortenedUrls;
 using UrlShortenerApi.Domain;
+using UrlShortenerApi.Domain.Abstractions;
 using UrlShortenerApi.Infrastructure.Database;
 
 namespace UrlShortenerApi.Application.Features.ShortenedUrls.Commands;
 
-public class CreateShortenedUrlCommandHandler : IRequestHandler<CreateShortenedUrlCommand, ShortenUrlResponse>
+public class CreateShortenedUrlCommandHandler : IRequestHandler<CreateShortenedUrlCommand, Result<ShortenUrlResponse>>
 {
     private readonly UrlShortenerContext _context;
     private readonly ICodeGenerator _codeGenerator;
@@ -18,7 +19,7 @@ public class CreateShortenedUrlCommandHandler : IRequestHandler<CreateShortenedU
         _codeGenerator = codeGenerator;
     }
 
-    public async Task<ShortenUrlResponse> Handle(CreateShortenedUrlCommand request, CancellationToken ctx)
+    public async Task<Result<ShortenUrlResponse>> Handle(CreateShortenedUrlCommand request, CancellationToken ctx)
     {
         string code;
         do
@@ -39,6 +40,6 @@ public class CreateShortenedUrlCommandHandler : IRequestHandler<CreateShortenedU
         var addedEntry = await _context.ShortenedUrls.AddAsync(shortenedUrl, ctx);
         await _context.SaveChangesAsync(ctx);
 
-        return new ShortenUrlResponse(addedEntry.Entity.ShortUrl);
+        return Result<ShortenUrlResponse>.Success(new ShortenUrlResponse(addedEntry.Entity.ShortUrl));
     }
 }
